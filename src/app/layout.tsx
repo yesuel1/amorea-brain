@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Noto_Sans_KR, Outfit, Cormorant_Garamond, Raleway } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@/components/Analytics";
@@ -30,6 +30,17 @@ const raleway = Raleway({
   variable: "--font-raleway",
   display: "swap",
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#1A1A2E" },
+    { media: "(prefers-color-scheme: dark)", color: "#1A1A2E" },
+  ],
+};
 
 export const metadata: Metadata = {
   title: "AMOREA Brain Care - 뇌 습관, 미리 만들어야 늦지 않습니다",
