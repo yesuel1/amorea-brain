@@ -7,8 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **AMOREA Brain Care** - A brain health habit platform for 50-60 year old pre-seniors.
 - Domain: amorea.kr/brain
 - Philosophy: "알지 말고, 관리하자" (Don't diagnose, just manage) - maintain brain health through habits without anxiety-inducing tests
+- Working directory: `amorea-brain/`
 
-For detailed specifications, see `../PROJECT_SPEC.md` and `../SKILL.md`.
+For detailed specifications, see `PROJECT_SPEC.md` and `SKILL.md`.
 
 ## Tech Stack
 
@@ -23,6 +24,8 @@ For detailed specifications, see `../PROJECT_SPEC.md` and `../SKILL.md`.
 ## Development Commands
 
 ```bash
+cd amorea-brain
+
 npm install              # Install dependencies
 npm run dev              # Dev server at localhost:3000
 npm run build            # Build for Cloudflare Pages
@@ -42,7 +45,7 @@ All server code must be Edge Runtime compatible:
 ## Architecture
 
 ```
-src/
+amorea-brain/src/
 ├── app/
 │   ├── brain/                    # Main brain care section
 │   │   ├── page.tsx              # Landing (hero + counselor message + games)
@@ -130,3 +133,37 @@ NEXT_PUBLIC_BASE_URL=https://amorea.kr
 Core tables: `profiles`, `counselors`, `brain_tests`, `game_records`, `habits`, `messages`, `products`, `page_content`, `share_links`
 
 Schema: `supabase/migrations/001_initial_schema.sql`
+
+---
+
+## 🚨 TODO (다음 세션에서 확인 필요)
+
+### 🔴 심각한 버그 수정 필요
+
+1. **Auth Callback client_count 버그** (`src/app/auth/callback/route.ts`)
+   - 현재: `.update({ client_count: counselor.id })` — UUID로 덮어씀!
+   - 수정: `.update({ client_count: counselor.client_count + 1 })`
+
+2. **OAuth 후 회원가입 리다이렉트 누락**
+   - 현재: 콜백 후 `/auth/signup`으로 자동 이동 안 됨
+   - 수정: 프로필 정보 없으면 `/auth/signup` 리다이렉트 추가
+
+### 🟠 UX 개선 필요
+
+3. **Role 기반 접근 제어 미완성** (`src/middleware.ts`)
+   - `/counselor/*`, `/admin/*` 경로에서 role 체크 없음
+   - 일반 사용자도 관리자 페이지 접근 가능 (보안 취약)
+
+4. **getUser vs getSession 혼용**
+   - 메인 페이지: `getUser()` (서버)
+   - 테스트 페이지: `getSession()` (클라이언트)
+   - 일관성 있게 통일 필요
+
+5. **로그인 사용자 무료 횟수 처리**
+   - 비로그인 상태에서 사용한 횟수는 로그인 후에도 복구 안 됨
+   - 로그인 시 무료 횟수 리셋 고려
+
+### 📝 참고사항
+- Vercel 배포 URL: https://amorea-brain.vercel.app
+- 카카오 로그인은 제거됨 (Google만 사용)
+- 기억력 게임 난이도 선택 추가됨 (1단계 8장, 2단계 16장)
