@@ -17,6 +17,10 @@ interface UserProfile {
 export default function SettingsPage() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+  const [birthYear, setBirthYear] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     loadUser();
@@ -36,8 +40,37 @@ export default function SettingsPage() {
         .single();
 
       setUser(profile);
+      if (profile) {
+        setDisplayName(profile.display_name || "");
+        setBirthYear(profile.birth_year?.toString() || "");
+      }
     }
     setIsLoading(false);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+
+    setIsSaving(true);
+    const supabase = createClient();
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        display_name: displayName || null,
+        birth_year: birthYear ? parseInt(birthYear) : null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", user.id);
+
+    if (error) {
+      alert("저장 실패: " + error.message);
+    } else {
+      setUser({ ...user, display_name: displayName, birth_year: birthYear ? parseInt(birthYear) : null });
+      setIsEditing(false);
+      alert("저장되었습니다!");
+    }
+    setIsSaving(false);
   };
 
   const handleLogout = async () => {
@@ -66,44 +99,99 @@ export default function SettingsPage() {
 
         {/* 프로필 */}
         <Card className="mb-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-vb-subtle flex items-center justify-center text-2xl">
-              👤
+          {isEditing ? (
+            <div className="space-y-4">
+              <h3 className="font-bold text-vb-black flex items-center gap-2">
+                <span>✏️</span> 프로필 수정
+              </h3>
+              <div>
+                <label className="block text-sm font-medium text-vb-charcoal mb-1">
+                  닉네임
+                </label>
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="닉네임을 입력하세요"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-vb-teal"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-vb-charcoal mb-1">
+                  출생년도
+                </label>
+                <input
+                  type="number"
+                  value={birthYear}
+                  onChange={(e) => setBirthYear(e.target.value)}
+                  placeholder="예: 1970"
+                  min="1930"
+                  max={new Date().getFullYear()}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-vb-teal"
+                />
+                {birthYear && (
+                  <p className="text-sm text-vb-muted mt-1">
+                    만 {new Date().getFullYear() - parseInt(birthYear)}세
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => setIsEditing(false)}
+                  className="flex-1"
+                >
+                  취소
+                </Button>
+                <Button
+                  onClick={handleSaveProfile}
+                  disabled={isSaving}
+                  className="flex-1"
+                >
+                  {isSaving ? "저장 중..." : "저장"}
+                </Button>
+              </div>
             </div>
-            <div className="flex-1">
+          ) : (
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-full bg-vb-subtle flex items-center justify-center text-2xl">
+                👤
+              </div>
+              <div className="flex-1">
+                {user ? (
+                  <>
+                    <p className="font-bold text-vb-black">
+                      {user.display_name || "이름 미입력"}
+                    </p>
+                    <p className="text-sm text-vb-muted">
+                      {user.birth_year
+                        ? `${new Date().getFullYear() - user.birth_year}세`
+                        : "나이 미입력"}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-bold text-vb-black">로그인이 필요합니다</p>
+                    <p className="text-sm text-vb-muted">
+                      로그인하고 기록을 저장하세요
+                    </p>
+                  </>
+                )}
+              </div>
               {user ? (
-                <>
-                  <p className="font-bold text-vb-black">
-                    {user.display_name || "이름 미입력"}
-                  </p>
-                  <p className="text-sm text-vb-muted">
-                    {user.birth_year
-                      ? `${new Date().getFullYear() - user.birth_year}세`
-                      : "나이 미입력"}
-                  </p>
-                </>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="text-sm text-vb-teal hover:underline"
+                >
+                  수정
+                </button>
               ) : (
-                <>
-                  <p className="font-bold text-vb-black">로그인이 필요합니다</p>
-                  <p className="text-sm text-vb-muted">
-                    로그인하고 기록을 저장하세요
-                  </p>
-                </>
+                <Link href="/auth/login">
+                  <Button size="sm">로그인</Button>
+                </Link>
               )}
             </div>
-            {user ? (
-              <Link
-                href="/auth/signup"
-                className="text-sm text-vb-teal hover:underline"
-              >
-                수정
-              </Link>
-            ) : (
-              <Link href="/auth/login">
-                <Button size="sm">로그인</Button>
-              </Link>
-            )}
-          </div>
+          )}
         </Card>
 
         {/* 알림 설정 */}
