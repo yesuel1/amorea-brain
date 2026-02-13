@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Noto_Sans_KR, Outfit, Cormorant_Garamond, Raleway } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@/components/Analytics";
+import { AuthCodeHandler } from "@/components/auth/AuthCodeHandler";
 
 const notoSansKr = Noto_Sans_KR({
   subsets: ["latin"],
@@ -75,6 +77,9 @@ export default function RootLayout({
       <body
         className={`${notoSansKr.variable} ${outfit.variable} ${cormorant.variable} ${raleway.variable} font-sans antialiased bg-vb-bg text-vb-black`}
       >
+        <Suspense fallback={null}>
+          <AuthCodeHandler />
+        </Suspense>
         {children}
         <Analytics />
       </body>
