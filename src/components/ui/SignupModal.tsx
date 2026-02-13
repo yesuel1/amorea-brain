@@ -11,14 +11,7 @@ interface SignupModalProps {
 export function SignupModal({ isOpen, onClose }: SignupModalProps) {
   const handleGoogleLogin = () => {
     trackSignupStart("google");
-    // TODO: Supabase Google OAuth
     window.location.href = "/auth/login?provider=google";
-  };
-
-  const handleKakaoLogin = () => {
-    trackSignupStart("kakao");
-    // TODO: Supabase Kakao OAuth
-    window.location.href = "/auth/login?provider=kakao";
   };
 
   return (
@@ -64,18 +57,8 @@ export function SignupModal({ isOpen, onClose }: SignupModalProps) {
           </ul>
         </div>
 
-        {/* 로그인 버튼들 */}
+        {/* 로그인 버튼 */}
         <div className="space-y-3">
-          <button
-            onClick={handleKakaoLogin}
-            className="w-full flex items-center justify-center gap-3 p-4 bg-[#FEE500] rounded-xl font-semibold text-vb-black hover:bg-opacity-90 transition-colors"
-          >
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="#3C1E1E">
-              <path d="M12 3C6.48 3 2 6.58 2 11c0 2.8 1.8 5.27 4.5 6.7-.14.52-.9 3.27-.93 3.48 0 0-.02.17.09.24.11.07.24.02.24.02.31-.04 3.64-2.4 4.19-2.79.63.09 1.28.14 1.91.14 5.52 0 10-3.58 10-8C22 6.58 17.52 3 12 3z" />
-            </svg>
-            카카오로 시작하기
-          </button>
-
           <button
             onClick={handleGoogleLogin}
             className="w-full flex items-center justify-center gap-3 p-4 bg-white border-2 border-vb-lightsilver rounded-xl font-semibold text-vb-black hover:bg-vb-subtle transition-colors"
