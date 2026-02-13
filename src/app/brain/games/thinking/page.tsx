@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { SignupModal } from "@/components/ui/SignupModal";
 import { ShareSheet } from "@/components/ui/ShareSheet";
-import { canUseFree, decrementFreeUses } from "@/lib/free-usage";
+import { canUseGame, decrementFreeUses, getFreeUsesRemaining } from "@/lib/free-usage";
 import { trackGamePlay, trackFreeUse, trackPaywallShown } from "@/lib/analytics";
 
 export default function ThinkingGamePage() {
@@ -20,15 +20,21 @@ export default function ThinkingGamePage() {
   const [canPlay, setCanPlay] = useState(true);
 
   useEffect(() => {
-    // 무료 사용 체크
-    if (!canUseFree()) {
-      setCanPlay(false);
-      setShowSignupModal(true);
-      trackPaywallShown();
-    } else {
-      const remaining = decrementFreeUses();
-      trackFreeUse(remaining);
-    }
+    const checkAccess = async () => {
+      const allowed = await canUseGame();
+      if (!allowed) {
+        setCanPlay(false);
+        setShowSignupModal(true);
+        trackPaywallShown();
+      } else {
+        const remaining = getFreeUsesRemaining();
+        if (remaining > 0) {
+          const newRemaining = decrementFreeUses();
+          trackFreeUse(newRemaining);
+        }
+      }
+    };
+    checkAccess();
   }, []);
 
   const handleComplete = (finalScore: number, finalDuration: number) => {

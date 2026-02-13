@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { SignupModal } from "@/components/ui/SignupModal";
 import { ShareSheet } from "@/components/ui/ShareSheet";
-import { canUseFree, decrementFreeUses } from "@/lib/free-usage";
+import { canUseGame, decrementFreeUses, getFreeUsesRemaining } from "@/lib/free-usage";
 import { trackGamePlay, trackFreeUse, trackPaywallShown } from "@/lib/analytics";
 
 export default function MemoryGamePage() {
@@ -21,15 +21,23 @@ export default function MemoryGamePage() {
   const [gameKey, setGameKey] = useState(0); // 게임 리셋용 키
 
   useEffect(() => {
-    // 무료 사용 체크
-    if (!canUseFree()) {
-      setCanPlay(false);
-      setShowSignupModal(true);
-      trackPaywallShown();
-    } else {
-      const remaining = decrementFreeUses();
-      trackFreeUse(remaining);
-    }
+    // 무료 사용 체크 (로그인 사용자는 무제한)
+    const checkAccess = async () => {
+      const canPlay = await canUseGame();
+      if (!canPlay) {
+        setCanPlay(false);
+        setShowSignupModal(true);
+        trackPaywallShown();
+      } else {
+        // 비로그인 사용자만 무료 횟수 차감
+        const remaining = getFreeUsesRemaining();
+        if (remaining > 0) {
+          const newRemaining = decrementFreeUses();
+          trackFreeUse(newRemaining);
+        }
+      }
+    };
+    checkAccess();
   }, []);
 
   const handleComplete = (finalScore: number, finalDuration: number) => {

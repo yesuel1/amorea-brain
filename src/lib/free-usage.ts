@@ -1,5 +1,7 @@
 "use client";
 
+import { createClient } from "@/lib/supabase/client";
+
 const FREE_USES_KEY = "brain_free_uses";
 const SESSION_ID_KEY = "brain_session_id";
 const INITIAL_FREE_USES = 3;
@@ -38,8 +40,19 @@ export function decrementFreeUses(): number {
   return newValue;
 }
 
-// 무료 사용 가능 여부
+// 무료 사용 가능 여부 (동기)
 export function canUseFree(): boolean {
+  return getFreeUsesRemaining() > 0;
+}
+
+// 무료 사용 가능 여부 (로그인 체크 포함 - 비동기)
+export async function canUseGame(): Promise<boolean> {
+  // 로그인한 사용자는 무제한
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) return true;
+
+  // 비로그인 사용자는 무료 횟수 체크
   return getFreeUsesRemaining() > 0;
 }
 
