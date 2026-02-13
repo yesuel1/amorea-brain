@@ -6,7 +6,7 @@ import { MemoryGame } from "@/components/brain/games/MemoryGame";
 import { CalcGame } from "@/components/brain/games/CalcGame";
 import { FocusGame } from "@/components/brain/games/FocusGame";
 import { SignupModal } from "@/components/ui/SignupModal";
-import { canUseFree, decrementFreeUses, getSessionId } from "@/lib/free-usage";
+import { canUseGame, decrementFreeUses, getFreeUsesRemaining, getSessionId } from "@/lib/free-usage";
 import { trackBrainTestStart, trackFreeUse, trackPaywallShown } from "@/lib/analytics";
 
 type GameType = "memory" | "calc" | "focus";
@@ -31,17 +31,24 @@ export default function BrainTestPage() {
   const [canProceed, setCanProceed] = useState(true);
 
   useEffect(() => {
-    // 무료 사용 체크
-    if (!canUseFree()) {
-      setCanProceed(false);
-      setShowSignupModal(true);
-      trackPaywallShown();
-    } else {
-      // 무료 횟수 차감 및 테스트 시작 추적
-      const remaining = decrementFreeUses();
-      trackFreeUse(remaining);
-      trackBrainTestStart();
-    }
+    // 무료 사용 체크 (로그인 사용자는 무제한)
+    const checkAccess = async () => {
+      const allowed = await canUseGame();
+      if (!allowed) {
+        setCanProceed(false);
+        setShowSignupModal(true);
+        trackPaywallShown();
+      } else {
+        // 비로그인 사용자만 무료 횟수 차감
+        const remaining = getFreeUsesRemaining();
+        if (remaining > 0) {
+          const newRemaining = decrementFreeUses();
+          trackFreeUse(newRemaining);
+        }
+        trackBrainTestStart();
+      }
+    };
+    checkAccess();
   }, []);
 
   const handleGameComplete = (score: number, duration: number) => {
