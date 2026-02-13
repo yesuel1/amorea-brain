@@ -26,13 +26,13 @@ async function getStats() {
   const { count: totalCounselors } = await supabase
     .from("counselors")
     .select("*", { count: "exact", head: true })
-    .eq("is_approved", true);
+    .eq("status", "active");
 
   // 미승인 카운셀러 수
   const { count: pendingCounselors } = await supabase
     .from("counselors")
     .select("*", { count: "exact", head: true })
-    .eq("is_approved", false);
+    .eq("status", "pending");
 
   // 오늘 가입자 수
   const today = new Date().toISOString().split("T")[0];
@@ -169,6 +169,18 @@ export default async function AdminDashboard() {
             <div>
               <h3 className="font-bold text-vb-black">제품 관리</h3>
               <p className="text-sm text-vb-muted">바이탈뷰티 제품 설정</p>
+            </div>
+          </a>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+          <a href="/admin/templates" className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-vb-gold/20 flex items-center justify-center text-2xl">
+              💌
+            </div>
+            <div>
+              <h3 className="font-bold text-vb-black">메시지 템플릿</h3>
+              <p className="text-sm text-vb-muted">카운셀러용 템플릿 관리</p>
             </div>
           </a>
         </Card>

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { trackCounselorMessageSent } from "@/lib/analytics";
+import type { MessageTemplate } from "@/types/database";
 
 interface Client {
   id: string;
@@ -31,12 +32,47 @@ export function MessageComposer({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [templates, setTemplates] = useState<MessageTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [showTemplates, setShowTemplates] = useState(false);
 
   const currentYear = new Date().getFullYear();
   const realAge = client.birth_year ? currentYear - client.birth_year : undefined;
 
+  // 템플릿 로드
+  useEffect(() => {
+    const loadTemplates = async () => {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("message_templates")
+        .select("*")
+        .eq("is_active", true)
+        .order("category");
+
+      if (data) {
+        setTemplates(data);
+      }
+    };
+
+    if (isOpen) {
+      loadTemplates();
+    }
+  }, [isOpen]);
+
+  // 템플릿에서 변수 치환
+  const applyTemplate = (template: MessageTemplate) => {
+    let content = template.content;
+    content = content.replace(/\{\{name\}\}/g, client.display_name || "고객");
+    content = content.replace(/\{\{brainAge\}\}/g, client.latestBrainAge?.toString() || "??");
+    content = content.replace(/\{\{streakDays\}\}/g, client.streakDays.toString());
+    setMessage(content);
+    setSelectedTemplateId(template.id);
+    setShowTemplates(false);
+  };
+
   const handleGenerateAI = async () => {
     setIsGenerating(true);
+    setSelectedTemplateId(null);
 
     try {
       const response = await fetch("/api/ai/message", {
@@ -79,7 +115,8 @@ export function MessageComposer({
         sender_id: counselorId,
         receiver_id: client.id,
         content: message.trim(),
-        is_ai_generated: isGenerating, // 마지막으로 AI 생성했으면 true
+        is_ai_generated: isGenerating,
+        template_id: selectedTemplateId,
       });
 
       if (error) throw error;
@@ -91,6 +128,7 @@ export function MessageComposer({
         onClose();
         setSent(false);
         setMessage("");
+        setSelectedTemplateId(null);
       }, 1500);
     } catch (error) {
       console.error("Error sending message:", error);
@@ -137,21 +175,51 @@ export function MessageComposer({
           </div>
         </div>
 
-        {/* AI 추천 버튼 */}
-        <Button
-          variant="outline"
-          fullWidth
-          onClick={handleGenerateAI}
-          isLoading={isGenerating}
-        >
-          ✨ AI 추천 메시지 생성
-        </Button>
+        {/* 메시지 옵션 버튼들 */}
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={handleGenerateAI}
+            isLoading={isGenerating}
+          >
+            ✨ AI 추천
+          </Button>
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={() => setShowTemplates(!showTemplates)}
+          >
+            📋 템플릿
+          </Button>
+        </div>
+
+        {/* 템플릿 목록 */}
+        {showTemplates && templates.length > 0 && (
+          <div className="border border-vb-lightsilver rounded-xl p-3 max-h-48 overflow-y-auto space-y-2">
+            {templates.map((template) => (
+              <button
+                key={template.id}
+                onClick={() => applyTemplate(template)}
+                className="w-full text-left p-2 rounded-lg hover:bg-vb-subtle transition-colors"
+              >
+                <p className="font-medium text-vb-black text-sm">{template.title}</p>
+                <p className="text-xs text-vb-muted line-clamp-1">
+                  {template.content.substring(0, 50)}...
+                </p>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* 메시지 입력 */}
         <div>
           <textarea
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={(e) => {
+              setMessage(e.target.value);
+              setSelectedTemplateId(null);
+            }}
             placeholder="고객님에게 전할 응원 메시지를 작성해주세요..."
             rows={5}
             className="w-full px-4 py-3 rounded-xl border-2 border-vb-lightsilver focus:border-vb-teal focus:outline-none resize-none"

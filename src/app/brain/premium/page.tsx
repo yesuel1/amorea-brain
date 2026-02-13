@@ -1,23 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-
-const FREE_FEATURES = [
-  { icon: "🧠", name: "뇌나이 측정", desc: "월 3회" },
-  { icon: "🎮", name: "기본 뇌운동 게임", desc: "3종 무제한" },
-  { icon: "📅", name: "습관 트래커", desc: "기본 5개" },
-  { icon: "📊", name: "기본 통계", desc: "주간 요약" },
-];
+import type { Subscription, Counselor } from "@/types/database";
 
 const PREMIUM_FEATURES = [
   { icon: "🧠", name: "뇌나이 측정", desc: "무제한", highlight: true },
   { icon: "🎮", name: "프리미엄 게임", desc: "12종 전체", highlight: true },
   { icon: "✨", name: "AI 맞춤 루틴", desc: "매일 새로운 추천", highlight: true },
   { icon: "📊", name: "심층 분석", desc: "영역별 상세 리포트", highlight: true },
-  { icon: "👩‍💼", name: "전담 카운셀러", desc: "1:1 맞춤 관리" },
-  { icon: "💌", name: "맞춤 응원 메시지", desc: "매주 발송" },
+  { icon: "👩‍💼", name: "나의 뇌건강 친구", desc: "전담 카운셀러 연결" },
+  { icon: "💌", name: "맞춤 응원 메시지", desc: "카운셀러 메시지 수신" },
   { icon: "📅", name: "습관 트래커", desc: "커스텀 무제한" },
   { icon: "🏆", name: "도전 프로그램", desc: "월간 챌린지" },
   { icon: "📱", name: "알림 설정", desc: "맞춤 알림" },
@@ -25,14 +21,161 @@ const PREMIUM_FEATURES = [
 ];
 
 export default function PremiumPage() {
+  const router = useRouter();
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly">("yearly");
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [counselor, setCounselor] = useState<Counselor | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubscribing, setIsSubscribing] = useState(false);
 
   const prices = {
-    monthly: 9900,
-    yearly: 79000, // 33% 할인
+    monthly: 4900,
+    yearly: Math.round(4900 * 12 * 0.9), // 10% 할인 = 52,920원
   };
 
   const monthlyEquivalent = Math.round(prices.yearly / 12);
+  const savings = prices.monthly * 12 - prices.yearly;
+
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  const loadUserData = async () => {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+
+    // 현재 구독 정보
+    const { data: sub } = await supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("user_id", user.id)
+      .single();
+
+    setSubscription(sub);
+
+    // 카운셀러 연결 확인
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("counselor_id")
+      .eq("id", user.id)
+      .single();
+
+    if (profile?.counselor_id) {
+      const { data: counselorData } = await supabase
+        .from("counselors")
+        .select("*")
+        .eq("id", profile.counselor_id)
+        .single();
+
+      setCounselor(counselorData);
+    }
+
+    setIsLoading(false);
+  };
+
+  const handleSubscribe = async () => {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      router.push("/auth/login?redirect=/brain/premium");
+      return;
+    }
+
+    setIsSubscribing(true);
+
+    // TODO: 실제 결제 연동
+    // 지금은 UI 데모로 구독 정보만 저장
+    const expiresAt = new Date();
+    if (selectedPlan === "yearly") {
+      expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+    } else {
+      expiresAt.setMonth(expiresAt.getMonth() + 1);
+    }
+
+    const { error } = await supabase
+      .from("subscriptions")
+      .upsert({
+        user_id: user.id,
+        plan_type: selectedPlan,
+        status: "active",
+        started_at: new Date().toISOString(),
+        expires_at: expiresAt.toISOString(),
+      });
+
+    if (error) {
+      console.error("Subscription error:", error);
+      alert("구독 처리 중 오류가 발생했습니다.");
+    } else {
+      alert("🎉 프리미엄 구독이 시작되었습니다!");
+      router.push("/brain");
+    }
+
+    setIsSubscribing(false);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-vb-bg pt-20 flex items-center justify-center">
+        <div className="animate-pulse text-vb-muted">로딩 중...</div>
+      </div>
+    );
+  }
+
+  // 이미 무료 구독 중 (카운셀러 연결)
+  if (subscription?.plan_type === "free" && counselor) {
+    return (
+      <div className="min-h-screen bg-vb-bg pt-20 pb-8 px-4">
+        <div className="max-w-mobile mx-auto">
+          <Card className="text-center py-8 bg-gradient-to-r from-vb-teal/10 to-vb-blue/10 border-vb-teal">
+            <span className="text-5xl block mb-4">🎁</span>
+            <h1 className="text-2xl font-bold text-vb-black mb-2">
+              무료로 이용 중이에요!
+            </h1>
+            <p className="text-vb-charcoal mb-4">
+              <strong>{counselor.full_name}</strong> 카운셀러 링크로 가입하셔서<br />
+              모든 프리미엄 기능을 무료로 이용하고 계십니다.
+            </p>
+            <Button variant="outline" onClick={() => router.push("/brain")}>
+              뇌건강 케어 하러가기
+            </Button>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // 이미 유료 구독 중
+  if (subscription?.status === "active" && subscription.plan_type !== "free") {
+    return (
+      <div className="min-h-screen bg-vb-bg pt-20 pb-8 px-4">
+        <div className="max-w-mobile mx-auto">
+          <Card className="text-center py-8 bg-gradient-to-r from-vb-gold/10 to-vb-coral/10 border-vb-gold">
+            <span className="text-5xl block mb-4">⭐</span>
+            <h1 className="text-2xl font-bold text-vb-black mb-2">
+              프리미엄 회원이에요!
+            </h1>
+            <p className="text-vb-charcoal mb-2">
+              {subscription.plan_type === "yearly" ? "연간" : "월간"} 구독 중
+            </p>
+            {subscription.expires_at && (
+              <p className="text-sm text-vb-muted mb-4">
+                만료일: {new Date(subscription.expires_at).toLocaleDateString("ko-KR")}
+              </p>
+            )}
+            <Button variant="outline" onClick={() => router.push("/brain")}>
+              뇌건강 케어 하러가기
+            </Button>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-vb-bg">
@@ -52,6 +195,19 @@ export default function PremiumPage() {
       </div>
 
       <div className="max-w-mobile mx-auto px-4 -mt-8">
+        {/* 무료 이용 안내 */}
+        <Card className="mb-4 bg-vb-teal/10 border-vb-teal/30">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">💡</span>
+            <div className="flex-1">
+              <p className="font-medium text-vb-black">무료로 이용하는 방법</p>
+              <p className="text-sm text-vb-charcoal">
+                카운셀러 링크로 가입하면 <strong>모든 기능 무료!</strong>
+              </p>
+            </div>
+          </div>
+        </Card>
+
         {/* 요금제 선택 */}
         <Card className="mb-6">
           <div className="flex gap-2 p-1 bg-vb-subtle rounded-xl mb-4">
@@ -73,7 +229,7 @@ export default function PremiumPage() {
                   : "text-vb-muted"
               }`}
             >
-              연간 <span className="text-vb-coral text-xs">33% 할인</span>
+              연간 <span className="text-vb-coral text-xs">10% 할인</span>
             </button>
           </div>
 
@@ -85,7 +241,7 @@ export default function PremiumPage() {
                   <span className="text-lg font-normal text-vb-muted">/월</span>
                 </p>
                 <p className="text-sm text-vb-muted">
-                  연 ₩{prices.yearly.toLocaleString()} (₩{(prices.monthly * 12 - prices.yearly).toLocaleString()} 절약)
+                  연 ₩{prices.yearly.toLocaleString()} (₩{savings.toLocaleString()} 절약)
                 </p>
               </>
             ) : (
@@ -96,11 +252,16 @@ export default function PremiumPage() {
             )}
           </div>
 
-          <Button fullWidth size="lg">
+          <Button
+            fullWidth
+            size="lg"
+            onClick={handleSubscribe}
+            isLoading={isSubscribing}
+          >
             프리미엄 시작하기
           </Button>
           <p className="text-center text-vb-muted text-xs mt-2">
-            7일 무료 체험 후 결제됩니다
+            결제 시스템 준비 중 (곧 오픈 예정)
           </p>
         </Card>
 
@@ -136,47 +297,39 @@ export default function PremiumPage() {
           </Card>
         </div>
 
-        {/* 무료 vs 프리미엄 비교 */}
+        {/* 가격 비교 */}
         <div className="mb-6">
           <h2 className="font-bold text-vb-black mb-3 flex items-center gap-2">
-            <span>📋</span> 무료 vs 프리미엄
+            <span>💰</span> 가격 비교
           </h2>
-          <div className="grid grid-cols-2 gap-3">
-            {/* 무료 */}
-            <Card className="bg-vb-subtle">
-              <p className="text-center font-bold text-vb-black mb-3">무료</p>
-              <div className="space-y-2">
-                {FREE_FEATURES.map((feature, i) => (
-                  <div key={i} className="text-center">
-                    <span className="text-lg">{feature.icon}</span>
-                    <p className="text-xs text-vb-charcoal">{feature.name}</p>
-                    <p className="text-xs text-vb-muted">{feature.desc}</p>
-                  </div>
-                ))}
+          <Card>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between py-2 border-b border-vb-lightsilver">
+                <div>
+                  <p className="font-medium text-vb-black">월간 구독</p>
+                  <p className="text-xs text-vb-muted">매월 자동 결제</p>
+                </div>
+                <p className="font-bold text-vb-black">₩4,900/월</p>
               </div>
-            </Card>
-
-            {/* 프리미엄 */}
-            <Card className="bg-gradient-to-b from-vb-gold/10 to-vb-gold/5 border-2 border-vb-gold">
-              <p className="text-center font-bold text-vb-black mb-3">
-                ⭐ 프리미엄
-              </p>
-              <div className="space-y-2">
-                {PREMIUM_FEATURES.slice(0, 4).map((feature, i) => (
-                  <div key={i} className="text-center">
-                    <span className="text-lg">{feature.icon}</span>
-                    <p className="text-xs text-vb-charcoal">{feature.name}</p>
-                    <p className="text-xs text-vb-teal font-medium">
-                      {feature.desc}
-                    </p>
-                  </div>
-                ))}
-                <p className="text-center text-xs text-vb-muted pt-2">
-                  +6개 더...
-                </p>
+              <div className="flex items-center justify-between py-2 border-b border-vb-lightsilver">
+                <div>
+                  <p className="font-medium text-vb-black">연간 구독</p>
+                  <p className="text-xs text-vb-teal">10% 할인 적용</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-vb-black">₩4,410/월</p>
+                  <p className="text-xs text-vb-muted">연 ₩52,920</p>
+                </div>
               </div>
-            </Card>
-          </div>
+              <div className="flex items-center justify-between py-2 bg-vb-teal/10 rounded-lg px-3 -mx-3">
+                <div>
+                  <p className="font-medium text-vb-teal">카운셀러 링크 가입</p>
+                  <p className="text-xs text-vb-charcoal">추천 링크로 가입 시</p>
+                </div>
+                <p className="font-bold text-vb-teal text-xl">무료!</p>
+              </div>
+            </div>
+          </Card>
         </div>
 
         {/* FAQ */}
@@ -186,12 +339,12 @@ export default function PremiumPage() {
           </h2>
           <div className="space-y-3">
             <FAQItem
-              q="언제든 해지할 수 있나요?"
-              a="네, 설정에서 언제든 해지 가능합니다. 해지 후에도 결제 기간 동안 프리미엄을 사용할 수 있습니다."
+              q="카운셀러 링크로 무료 가입하려면?"
+              a="주변에 AMOREA 카운셀러가 있다면, 카운셀러의 초대 링크를 통해 가입하시면 모든 프리미엄 기능을 무료로 이용할 수 있습니다."
             />
             <FAQItem
-              q="무료 체험 중 결제되나요?"
-              a="아니요, 7일 무료 체험 기간 동안은 결제되지 않습니다. 체험 중 해지하면 비용이 발생하지 않습니다."
+              q="언제든 해지할 수 있나요?"
+              a="네, 설정에서 언제든 해지 가능합니다. 해지 후에도 결제 기간 동안 프리미엄을 사용할 수 있습니다."
             />
             <FAQItem
               q="환불 정책은 어떻게 되나요?"
@@ -202,8 +355,13 @@ export default function PremiumPage() {
 
         {/* 하단 CTA */}
         <div className="pb-8">
-          <Button fullWidth size="lg">
-            7일 무료로 시작하기
+          <Button
+            fullWidth
+            size="lg"
+            onClick={handleSubscribe}
+            isLoading={isSubscribing}
+          >
+            프리미엄 시작하기
           </Button>
         </div>
       </div>

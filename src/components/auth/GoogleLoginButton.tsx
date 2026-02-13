@@ -6,11 +6,13 @@ import { useState } from "react";
 interface GoogleLoginButtonProps {
   redirectTo?: string;
   className?: string;
+  counselorCode?: string; // 카운셀러 링크로 가입 시
 }
 
 export function GoogleLoginButton({
   redirectTo = "/brain",
   className = "",
+  counselorCode,
 }: GoogleLoginButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -18,10 +20,15 @@ export function GoogleLoginButton({
     setIsLoading(true);
     const supabase = createClient();
 
+    // 카운셀러 코드가 있으면 URL에 포함
+    const callbackUrl = counselorCode
+      ? `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(redirectTo)}&counselor_code=${encodeURIComponent(counselorCode)}`
+      : `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(redirectTo)}`;
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+        redirectTo: callbackUrl,
         queryParams: {
           access_type: "offline",
           prompt: "consent",

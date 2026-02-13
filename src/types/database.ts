@@ -6,6 +6,10 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
+export type CounselorStatus = "pending" | "active" | "inactive";
+export type SubscriptionPlan = "free" | "monthly" | "yearly";
+export type SubscriptionStatus = "active" | "cancelled" | "expired";
+
 export interface Database {
   public: {
     Tables: {
@@ -62,10 +66,15 @@ export interface Database {
           approved_at: string | null;
           client_count: number;
           created_at: string;
+          // 추가 필드
+          phone: string | null;
+          kakao_link: string | null;
+          instagram_link: string | null;
+          status: CounselorStatus;
         };
         Insert: {
           id: string;
-          code: string;
+          code?: string; // 자동 생성됨
           full_name: string;
           title?: string | null;
           photo_url?: string | null;
@@ -77,6 +86,10 @@ export interface Database {
           approved_at?: string | null;
           client_count?: number;
           created_at?: string;
+          phone?: string | null;
+          kakao_link?: string | null;
+          instagram_link?: string | null;
+          status?: CounselorStatus;
         };
         Update: {
           id?: string;
@@ -92,6 +105,10 @@ export interface Database {
           approved_at?: string | null;
           client_count?: number;
           created_at?: string;
+          phone?: string | null;
+          kakao_link?: string | null;
+          instagram_link?: string | null;
+          status?: CounselorStatus;
         };
       };
       brain_tests: {
@@ -199,6 +216,7 @@ export interface Database {
           is_ai_generated: boolean;
           is_read: boolean;
           created_at: string;
+          template_id: string | null;
         };
         Insert: {
           id?: string;
@@ -208,6 +226,7 @@ export interface Database {
           is_ai_generated?: boolean;
           is_read?: boolean;
           created_at?: string;
+          template_id?: string | null;
         };
         Update: {
           id?: string;
@@ -216,6 +235,71 @@ export interface Database {
           content?: string;
           is_ai_generated?: boolean;
           is_read?: boolean;
+          created_at?: string;
+          template_id?: string | null;
+        };
+      };
+      message_templates: {
+        Row: {
+          id: string;
+          title: string;
+          content: string;
+          category: string;
+          is_active: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          content: string;
+          category?: string;
+          is_active?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          content?: string;
+          category?: string;
+          is_active?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      subscriptions: {
+        Row: {
+          id: string;
+          user_id: string;
+          plan_type: SubscriptionPlan;
+          status: SubscriptionStatus;
+          started_at: string;
+          expires_at: string | null;
+          cancelled_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          plan_type: SubscriptionPlan;
+          status?: SubscriptionStatus;
+          started_at?: string;
+          expires_at?: string | null;
+          cancelled_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          plan_type?: SubscriptionPlan;
+          status?: SubscriptionStatus;
+          started_at?: string;
+          expires_at?: string | null;
+          cancelled_at?: string | null;
           created_at?: string;
         };
       };
@@ -320,7 +404,33 @@ export interface Database {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      generate_counselor_code: {
+        Args: Record<string, never>;
+        Returns: string;
+      };
+    };
     Enums: Record<string, never>;
   };
 }
+
+// 편의를 위한 타입 별칭
+export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+export type Counselor = Database["public"]["Tables"]["counselors"]["Row"];
+export type BrainTest = Database["public"]["Tables"]["brain_tests"]["Row"];
+export type GameRecord = Database["public"]["Tables"]["game_records"]["Row"];
+export type Habit = Database["public"]["Tables"]["habits"]["Row"];
+export type Message = Database["public"]["Tables"]["messages"]["Row"];
+export type MessageTemplate = Database["public"]["Tables"]["message_templates"]["Row"];
+export type Subscription = Database["public"]["Tables"]["subscriptions"]["Row"];
+export type Product = Database["public"]["Tables"]["products"]["Row"];
+
+// 카운셀러 + 프로필 조인 타입
+export type CounselorWithProfile = Counselor & {
+  profiles?: Profile;
+};
+
+// 회원 + 카운셀러 정보 조인 타입
+export type ProfileWithCounselor = Profile & {
+  counselor?: Counselor | null;
+};

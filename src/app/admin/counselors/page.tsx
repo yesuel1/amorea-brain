@@ -10,7 +10,8 @@ interface Counselor {
   full_name: string;
   title: string | null;
   introduction: string | null;
-  is_approved: boolean;
+  phone: string | null;
+  status: "pending" | "active" | "inactive";
   created_at: string;
   client_count: number;
 }
@@ -32,23 +33,30 @@ async function getCounselors() {
   const { data: pending } = await supabase
     .from("counselors")
     .select("*")
-    .eq("is_approved", false)
+    .eq("status", "pending")
     .order("created_at", { ascending: false });
 
-  const { data: approved } = await supabase
+  const { data: active } = await supabase
     .from("counselors")
     .select("*")
-    .eq("is_approved", true)
+    .eq("status", "active")
     .order("client_count", { ascending: false });
+
+  const { data: inactive } = await supabase
+    .from("counselors")
+    .select("*")
+    .eq("status", "inactive")
+    .order("created_at", { ascending: false });
 
   return {
     pending: (pending || []) as Counselor[],
-    approved: (approved || []) as Counselor[],
+    active: (active || []) as Counselor[],
+    inactive: (inactive || []) as Counselor[],
   };
 }
 
 export default async function AdminCounselorsPage() {
-  const { pending, approved } = await getCounselors();
+  const { pending, active, inactive } = await getCounselors();
 
   return (
     <div className="p-8">
@@ -87,6 +95,9 @@ export default async function AdminCounselorsPage() {
                       {counselor.title && (
                         <p className="text-sm text-vb-muted">{counselor.title}</p>
                       )}
+                      {counselor.phone && (
+                        <p className="text-sm text-vb-charcoal">📞 {counselor.phone}</p>
+                      )}
                       {counselor.introduction && (
                         <p className="text-sm text-vb-charcoal mt-1 line-clamp-2">
                           {counselor.introduction}
@@ -98,7 +109,7 @@ export default async function AdminCounselorsPage() {
                       </p>
                     </div>
                   </div>
-                  <CounselorApprovalActions counselorId={counselor.id} />
+                  <CounselorApprovalActions counselorId={counselor.id} currentStatus="pending" />
                 </div>
               </Card>
             ))}
@@ -106,17 +117,17 @@ export default async function AdminCounselorsPage() {
         )}
       </section>
 
-      {/* 승인된 카운셀러 */}
-      <section>
+      {/* 활성 카운셀러 */}
+      <section className="mb-8">
         <h2 className="font-bold text-vb-black mb-4 flex items-center gap-2">
           <span className="text-xl">✅</span>
-          활성 카운셀러 ({approved.length})
+          활성 카운셀러 ({active.length})
         </h2>
 
-        {approved.length === 0 ? (
+        {active.length === 0 ? (
           <Card>
             <p className="text-center text-vb-muted py-4">
-              승인된 카운셀러가 없습니다
+              활성 카운셀러가 없습니다
             </p>
           </Card>
         ) : (
@@ -139,7 +150,7 @@ export default async function AdminCounselorsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-vb-lightsilver">
-                {approved.map((counselor) => (
+                {active.map((counselor) => (
                   <tr key={counselor.id}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -170,14 +181,17 @@ export default async function AdminCounselorsPage() {
                       <span className="text-vb-muted text-sm">명</span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <a
-                        href={`/counselor/${counselor.code}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-vb-teal hover:underline"
-                      >
-                        페이지 보기 →
-                      </a>
+                      <div className="flex items-center justify-end gap-2">
+                        <a
+                          href={`/${counselor.code}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-vb-teal hover:underline"
+                        >
+                          페이지
+                        </a>
+                        <CounselorApprovalActions counselorId={counselor.id} currentStatus="active" />
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -186,6 +200,49 @@ export default async function AdminCounselorsPage() {
           </div>
         )}
       </section>
+
+      {/* 비활성 카운셀러 */}
+      {inactive.length > 0 && (
+        <section>
+          <h2 className="font-bold text-vb-black mb-4 flex items-center gap-2">
+            <span className="text-xl">⛔</span>
+            비활성 카운셀러 ({inactive.length})
+          </h2>
+
+          <div className="overflow-x-auto">
+            <table className="w-full opacity-60">
+              <thead className="bg-vb-subtle">
+                <tr>
+                  <th className="text-left px-4 py-3 text-sm font-medium text-vb-charcoal">
+                    카운셀러
+                  </th>
+                  <th className="text-left px-4 py-3 text-sm font-medium text-vb-charcoal">
+                    코드
+                  </th>
+                  <th className="text-right px-4 py-3 text-sm font-medium text-vb-charcoal">
+                    관리
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-vb-lightsilver">
+                {inactive.map((counselor) => (
+                  <tr key={counselor.id}>
+                    <td className="px-4 py-3">
+                      <span className="font-medium text-vb-black">{counselor.full_name}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <code className="text-sm text-vb-muted">{counselor.code}</code>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <CounselorApprovalActions counselorId={counselor.id} currentStatus="inactive" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

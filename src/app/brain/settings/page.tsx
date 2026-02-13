@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { NotificationSettings } from "@/components/brain/NotificationSettings";
+import { MyCounselorCard } from "@/components/brain/MyCounselorCard";
 import { createClient } from "@/lib/supabase/client";
 
 interface UserProfile {
@@ -193,6 +194,13 @@ export default function SettingsPage() {
             </div>
           )}
         </Card>
+
+        {/* 나의 뇌건강 친구 (카운셀러) */}
+        {user && (
+          <div className="mb-4">
+            <MyCounselorCard />
+          </div>
+        )}
 
         {/* 알림 설정 */}
         <div className="mb-4">

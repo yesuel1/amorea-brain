@@ -43,7 +43,7 @@ export default function CounselorClientsPage() {
       .from("counselors")
       .select("id")
       .eq("id", user.id)
-      .eq("is_approved", true)
+      .eq("status", "active")
       .single();
 
     if (!counselorData) {

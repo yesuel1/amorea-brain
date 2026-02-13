@@ -52,7 +52,7 @@ export default function CounselorDashboardPage() {
       .from("counselors")
       .select("*")
       .eq("id", user.id)
-      .eq("is_approved", true)
+      .eq("status", "active")
       .single();
 
     if (!counselorData) {
@@ -122,7 +122,7 @@ export default function CounselorDashboardPage() {
     return null;
   }
 
-  const shareUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/counselor/${counselor.code}`;
+  const shareUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/${counselor.code}`;
 
   return (
     <div className="min-h-screen bg-vb-bg pt-20 pb-8 px-4">
