@@ -23,6 +23,20 @@ const games = [
     description: "색 변화를 감지하며 집중력을 키워보세요",
     color: "from-vb-teal to-vb-green",
   },
+  {
+    slug: "language",
+    name: "언어력 게임",
+    icon: "📝",
+    description: "초성을 보고 단어를 맞춰보세요",
+    color: "from-vb-gold to-vb-coral",
+  },
+  {
+    slug: "thinking",
+    name: "사고력 게임",
+    icon: "🧠",
+    description: "패턴을 파악하고 다음을 예측하세요",
+    color: "from-vb-navy to-vb-blue",
+  },
 ];
 
 export default function GamesPage() {

@@ -76,6 +76,18 @@ export default function BrainTestPage() {
 
   const currentGame = STEPS[currentStep];
 
+  // 모든 테스트 완료 후 결과 페이지로 이동 중
+  if (!currentGame) {
+    return (
+      <div className="min-h-screen pt-20 px-4 flex items-center justify-center">
+        <div className="text-center">
+          <span className="text-5xl block mb-4">🧠</span>
+          <p className="text-vb-muted">결과를 계산하고 있어요...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!canProceed) {
     return (
       <div className="min-h-screen pt-20 px-4 flex items-center justify-center">

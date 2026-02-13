@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 
 interface CounselorPageProps {
-  params: { code: string };
+  params: Promise<{ code: string }>;
 }
 
 async function getCounselor(code: string) {
@@ -35,13 +35,14 @@ async function getCounselor(code: string) {
 }
 
 export default async function CounselorPage({ params }: CounselorPageProps) {
-  const counselor = await getCounselor(params.code);
+  const { code } = await params;
+  const counselor = await getCounselor(code);
 
   if (!counselor) {
     notFound();
   }
 
-  const signupUrl = `/auth/login?counselor_code=${params.code}&redirect=/brain`;
+  const signupUrl = `/auth/login?counselor_code=${code}&redirect=/brain`;
 
   return (
     <div className="min-h-screen bg-vb-bg">

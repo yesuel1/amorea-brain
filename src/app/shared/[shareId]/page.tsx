@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 
 interface SharedPageProps {
-  params: { shareId: string };
+  params: Promise<{ shareId: string }>;
 }
 
 async function getShareData(shareId: string) {
@@ -33,7 +33,8 @@ async function getShareData(shareId: string) {
 export async function generateMetadata({
   params,
 }: SharedPageProps): Promise<Metadata> {
-  const shareData = await getShareData(params.shareId);
+  const { shareId } = await params;
+  const shareData = await getShareData(shareId);
 
   if (!shareData) {
     return {
@@ -86,7 +87,8 @@ export async function generateMetadata({
 }
 
 export default async function SharedPage({ params }: SharedPageProps) {
-  const shareData = await getShareData(params.shareId);
+  const { shareId } = await params;
+  const shareData = await getShareData(shareId);
 
   if (!shareData) {
     notFound();
