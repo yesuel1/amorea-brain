@@ -1,3 +1,5 @@
+export const runtime = "edge";
+
 import { HeroSection } from "@/components/brain/HeroSection";
 import { CounselorMessageCard } from "@/components/brain/CounselorMessageCard";
 import { BrainMapSection } from "@/components/brain/BrainMapSection";
