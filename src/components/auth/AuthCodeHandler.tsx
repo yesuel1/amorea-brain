@@ -1,40 +1,47 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export function AuthCodeHandler() {
   const router = useRouter();
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
 
-    // URL hash에서 세션 감지 (Supabase implicit flow)
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) {
-        router.replace("/brain");
-        router.refresh();
-      }
-    });
+    // 이미 처리 중이면 스킵
+    if (isProcessing) return;
 
     // URL에 code가 있으면 처리
-    const url = new URL(window.location.href);
-    const code = url.searchParams.get("code");
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
 
     if (code) {
-      // URL에서 code 제거
-      url.searchParams.delete("code");
-      window.history.replaceState({}, "", url.pathname);
+      setIsProcessing(true);
 
-      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-        if (error) {
-          console.error("Auth error:", error);
-          alert(`로그인 에러: ${error.message}`);
-        }
-      });
+      // URL에서 code 제거 (history 변경)
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, "", cleanUrl);
+
+      // 클라이언트에서 code 교환
+      supabase.auth.exchangeCodeForSession(code)
+        .then(({ data, error }) => {
+          if (error) {
+            console.error("Auth error:", error.message);
+            router.replace(`/brain?error=${encodeURIComponent(error.message)}`);
+          } else if (data.session) {
+            // 로그인 성공
+            router.replace("/brain");
+            router.refresh();
+          }
+        })
+        .finally(() => {
+          setIsProcessing(false);
+        });
     }
-  }, [router]);
+  }, [router, isProcessing]);
 
   return null;
 }
