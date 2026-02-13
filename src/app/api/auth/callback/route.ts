@@ -35,8 +35,12 @@ export async function GET(request: NextRequest) {
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`);
     }
+
+    // 에러가 있으면 에러 메시지 포함
+    console.error("Auth callback error:", error);
+    return NextResponse.redirect(`${origin}/brain?error=${encodeURIComponent(error.message)}`);
   }
 
-  // 에러 발생 시 로그인 페이지로 리다이렉트
-  return NextResponse.redirect(`${origin}/brain?error=auth_error`);
+  // code가 없으면 에러
+  return NextResponse.redirect(`${origin}/brain?error=no_code`);
 }

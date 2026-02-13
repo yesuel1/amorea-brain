@@ -7,8 +7,18 @@ const counselorRoutes = ["/counselor/dashboard", "/counselor/clients", "/counsel
 const adminRoutes = ["/admin"];
 
 export async function middleware(request: NextRequest) {
+  const { pathname, searchParams } = request.nextUrl;
+
+  // OAuth code가 있으면 /api/auth/callback으로 리다이렉트
+  const code = searchParams.get("code");
+  if (code && pathname === "/") {
+    const callbackUrl = new URL("/api/auth/callback", request.url);
+    callbackUrl.searchParams.set("code", code);
+    callbackUrl.searchParams.set("next", "/brain");
+    return NextResponse.redirect(callbackUrl);
+  }
+
   const { response, user } = await updateSession(request);
-  const { pathname } = request.nextUrl;
 
   // 보호된 경로 체크
   const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
