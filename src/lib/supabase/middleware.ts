@@ -1,68 +1,41 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
-  const response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
-
   // Supabase 설정이 없으면 그냥 통과
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return { response, user: null };
+    return {
+      response: NextResponse.next({ request }),
+      user: null
+    };
   }
 
-  let updatedResponse = response;
+  let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
+        getAll() {
+          return request.cookies.getAll();
         },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-          updatedResponse = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
-          updatedResponse.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value: "",
-            ...options,
-          });
-          updatedResponse = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
-          updatedResponse.cookies.set({
-            name,
-            value: "",
-            ...options,
-          });
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          );
+          supabaseResponse = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          );
         },
       },
     }
   );
 
-  // 세션 갱신
+  // 중요: getUser()를 호출해야 세션이 갱신됨
+  // getSession()은 JWT를 검증하지 않으므로 getUser() 사용
   const { data: { user } } = await supabase.auth.getUser();
 
-  return { response: updatedResponse, user };
+  return { response: supabaseResponse, user };
 }
