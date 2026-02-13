@@ -7,7 +7,7 @@ import { HabitChecklist } from "@/components/brain/HabitChecklist";
 import { ProductsSection } from "@/components/brain/ProductsSection";
 import { QuoteSection } from "@/components/brain/QuoteSection";
 import { BottomCTA } from "@/components/brain/BottomCTA";
-import { GoogleLoginButton } from "@/components/auth";
+import { GoogleLoginButton, LogoutButton } from "@/components/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function BrainPage() {
@@ -21,12 +21,19 @@ export default async function BrainPage() {
 
       {/* 메인 컨텐츠 */}
       <div className="max-w-mobile mx-auto px-4 pb-32">
-        {/* 로그인 (비로그인 시에만 표시) */}
-        {!user && (
-          <div className="mt-6 mb-8">
-            <GoogleLoginButton redirectTo="/brain/dashboard" />
-          </div>
-        )}
+        {/* 로그인/로그아웃 */}
+        <div className="mt-6 mb-8">
+          {user ? (
+            <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-200">
+              <span className="text-vb-charcoal">
+                {user.email}로 로그인됨
+              </span>
+              <LogoutButton className="text-sm text-vb-coral hover:underline" />
+            </div>
+          ) : (
+            <GoogleLoginButton redirectTo="/brain" />
+          )}
+        </div>
 
         {/* 카운셀러 메시지 카드 */}
         <CounselorMessageCard />
