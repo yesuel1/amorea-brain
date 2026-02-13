@@ -18,6 +18,7 @@ export default function MemoryGamePage() {
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [showShareSheet, setShowShareSheet] = useState(false);
   const [canPlay, setCanPlay] = useState(true);
+  const [gameKey, setGameKey] = useState(0); // 게임 리셋용 키
 
   useEffect(() => {
     // 무료 사용 체크
@@ -42,6 +43,7 @@ export default function MemoryGamePage() {
     setGameCompleted(false);
     setScore(0);
     setDuration(0);
+    setGameKey((prev) => prev + 1); // 게임 컴포넌트 리셋
   };
 
   if (!canPlay) {
@@ -65,7 +67,7 @@ export default function MemoryGamePage() {
 
         {!gameCompleted ? (
           <Card>
-            <MemoryGame onComplete={handleComplete} standalone />
+            <MemoryGame key={gameKey} onComplete={handleComplete} standalone />
           </Card>
         ) : (
           <div className="space-y-4">

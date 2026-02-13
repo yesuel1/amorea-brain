@@ -3,7 +3,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/Button";
 
-const EMOJIS = ["🍎", "🍊", "🍋", "🍇", "🍓", "🍑", "🥝", "🍒"];
+// 난이도별 이모지 설정
+const EMOJIS_EASY = ["🍎", "🍊", "🍋", "🍇"]; // 4쌍 = 8장
+const EMOJIS_HARD = ["🍎", "🍊", "🍋", "🍇", "🍓", "🍑", "🥝", "🍒"]; // 8쌍 = 16장
+
+type Difficulty = "easy" | "hard";
 
 interface Card {
   id: number;
@@ -15,9 +19,11 @@ interface Card {
 interface MemoryGameProps {
   onComplete: (score: number, duration: number) => void;
   standalone?: boolean;
+  initialDifficulty?: Difficulty;
 }
 
-export function MemoryGame({ onComplete, standalone = false }: MemoryGameProps) {
+export function MemoryGame({ onComplete, standalone = false, initialDifficulty }: MemoryGameProps) {
+  const [difficulty, setDifficulty] = useState<Difficulty | null>(initialDifficulty || null);
   const [cards, setCards] = useState<Card[]>([]);
   const [flippedCards, setFlippedCards] = useState<number[]>([]);
   const [matchedPairs, setMatchedPairs] = useState(0);
@@ -26,9 +32,12 @@ export function MemoryGame({ onComplete, standalone = false }: MemoryGameProps) 
   const [startTime, setStartTime] = useState<number>(0);
   const [isChecking, setIsChecking] = useState(false);
 
+  const currentEmojis = difficulty === "easy" ? EMOJIS_EASY : EMOJIS_HARD;
+
   // 게임 초기화
-  const initializeGame = useCallback(() => {
-    const shuffledEmojis = [...EMOJIS, ...EMOJIS]
+  const initializeGame = useCallback((diff: Difficulty) => {
+    const emojis = diff === "easy" ? EMOJIS_EASY : EMOJIS_HARD;
+    const shuffledEmojis = [...emojis, ...emojis]
       .sort(() => Math.random() - 0.5)
       .map((emoji, index) => ({
         id: index,
@@ -43,11 +52,19 @@ export function MemoryGame({ onComplete, standalone = false }: MemoryGameProps) 
     setGameStarted(false);
     setStartTime(0);
     setIsChecking(false);
+    setDifficulty(diff);
   }, []);
 
+  // 난이도 선택 시 게임 시작
+  const handleSelectDifficulty = (diff: Difficulty) => {
+    initializeGame(diff);
+  };
+
   useEffect(() => {
-    initializeGame();
-  }, [initializeGame]);
+    if (initialDifficulty) {
+      initializeGame(initialDifficulty);
+    }
+  }, [initialDifficulty, initializeGame]);
 
   // 카드 클릭 핸들러
   const handleCardClick = (cardId: number) => {
@@ -99,41 +116,84 @@ export function MemoryGame({ onComplete, standalone = false }: MemoryGameProps) 
 
   // 게임 완료 체크
   useEffect(() => {
-    if (matchedPairs === EMOJIS.length && gameStarted) {
+    if (difficulty && matchedPairs === currentEmojis.length && gameStarted) {
       const duration = Math.floor((Date.now() - startTime) / 1000);
-      // 점수 계산: 최소 이동 횟수(8)에서 가까울수록 높은 점수
-      const minMoves = EMOJIS.length;
+      // 점수 계산: 최소 이동 횟수에서 가까울수록 높은 점수
+      const minMoves = currentEmojis.length;
       const efficiency = Math.max(0, 1 - (moves - minMoves) / (minMoves * 2));
-      const timeBonus = Math.max(0, 1 - duration / 120); // 2분 기준
+      const timeBonus = Math.max(0, 1 - duration / (difficulty === "easy" ? 60 : 120));
       const score = Math.round((efficiency * 70 + timeBonus * 30));
 
       setTimeout(() => {
         onComplete(score, duration);
       }, 500);
     }
-  }, [matchedPairs, gameStarted, moves, startTime, onComplete]);
+  }, [matchedPairs, gameStarted, moves, startTime, onComplete, difficulty, currentEmojis.length]);
+
+  // 난이도 선택 화면
+  if (!difficulty) {
+    return (
+      <div className="w-full max-w-md mx-auto text-center">
+        <p className="text-vb-muted mb-6">난이도를 선택하세요</p>
+        <div className="space-y-3">
+          <Button
+            fullWidth
+            variant="secondary"
+            onClick={() => handleSelectDifficulty("easy")}
+            className="py-6"
+          >
+            <div>
+              <span className="text-2xl block mb-1">🌱</span>
+              <span className="font-bold">1단계 (쉬움)</span>
+              <span className="block text-sm text-vb-muted mt-1">8장 (4쌍)</span>
+            </div>
+          </Button>
+          <Button
+            fullWidth
+            onClick={() => handleSelectDifficulty("hard")}
+            className="py-6"
+          >
+            <div>
+              <span className="text-2xl block mb-1">🔥</span>
+              <span className="font-bold">2단계 (어려움)</span>
+              <span className="block text-sm text-vb-silver mt-1">16장 (8쌍)</span>
+            </div>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-md mx-auto">
+      {/* 난이도 표시 */}
+      <div className="text-center mb-2">
+        <span className={`text-xs px-2 py-1 rounded-full ${
+          difficulty === "easy" ? "bg-vb-teal/20 text-vb-teal" : "bg-vb-coral/20 text-vb-coral"
+        }`}>
+          {difficulty === "easy" ? "1단계 쉬움" : "2단계 어려움"}
+        </span>
+      </div>
+
       {/* 게임 정보 */}
       <div className="flex justify-between items-center mb-4 px-2">
         <div className="text-sm text-vb-muted">
           이동: <span className="font-bold text-vb-black">{moves}</span>
         </div>
         <div className="text-sm text-vb-muted">
-          매칭: <span className="font-bold text-vb-teal">{matchedPairs}/{EMOJIS.length}</span>
+          매칭: <span className="font-bold text-vb-teal">{matchedPairs}/{currentEmojis.length}</span>
         </div>
       </div>
 
       {/* 게임 보드 */}
-      <div className="grid grid-cols-4 gap-2 mb-4">
+      <div className={`grid gap-2 mb-4 ${difficulty === "easy" ? "grid-cols-4" : "grid-cols-4"}`}>
         {cards.map((card) => (
           <button
             key={card.id}
             onClick={() => handleCardClick(card.id)}
             disabled={card.isFlipped || card.isMatched || isChecking}
             className={`
-              aspect-square rounded-xl text-3xl
+              aspect-square rounded-xl ${difficulty === "easy" ? "text-4xl" : "text-3xl"}
               flex items-center justify-center
               transition-all duration-300 transform
               ${
@@ -160,9 +220,12 @@ export function MemoryGame({ onComplete, standalone = false }: MemoryGameProps) 
 
       {/* 다시하기 (standalone 모드) */}
       {standalone && (
-        <div className="mt-4">
-          <Button variant="ghost" fullWidth onClick={initializeGame}>
+        <div className="mt-4 space-y-2">
+          <Button variant="ghost" fullWidth onClick={() => initializeGame(difficulty)}>
             다시 하기
+          </Button>
+          <Button variant="ghost" fullWidth onClick={() => setDifficulty(null)}>
+            난이도 변경
           </Button>
         </div>
       )}
