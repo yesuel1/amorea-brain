@@ -1,4 +1,3 @@
-export const runtime = "edge";
 
 import { Card } from "@/components/ui/Card";
 import { PRODUCTS } from "@/lib/products";

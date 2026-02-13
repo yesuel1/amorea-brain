@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export const runtime = "edge";
 
 // OpenAI TTS 음성 옵션
 type Voice = "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer";

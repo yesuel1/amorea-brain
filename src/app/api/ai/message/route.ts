@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export const runtime = "edge";
 
 const SYSTEM_PROMPT = `당신은 아모레퍼시픽 뷰티 카운셀러를 돕는 뇌 건강 전문 AI입니다.
 카운셀러가 고객에게 보내는 따뜻한 응원 메시지를 작성합니다.

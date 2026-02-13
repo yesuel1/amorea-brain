@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export const runtime = "edge";
 
 const SYSTEM_PROMPT = `당신은 50~60대 프리시니어를 위한 뇌 건강 전문가입니다.
 사용자의 뇌 테스트 결과와 습관 데이터를 분석하여 개인 맞춤 일일 루틴을 추천합니다.
