@@ -28,17 +28,21 @@ export default function BrainTestPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [scores, setScores] = useState<GameScore[]>([]);
   const [showSignupModal, setShowSignupModal] = useState(false);
-  const [canProceed, setCanProceed] = useState(true);
+  const [canProceed, setCanProceed] = useState<boolean | null>(null); // null = 로딩 중
 
   useEffect(() => {
     // 무료 사용 체크 (로그인 사용자는 무제한)
+    let isMounted = true;
     const checkAccess = async () => {
       const allowed = await canUseGame();
+      if (!isMounted) return;
+
       if (!allowed) {
         setCanProceed(false);
         setShowSignupModal(true);
         trackPaywallShown();
       } else {
+        setCanProceed(true);
         // 비로그인 사용자만 무료 횟수 차감
         const remaining = getFreeUsesRemaining();
         if (remaining > 0) {
@@ -49,6 +53,7 @@ export default function BrainTestPage() {
       }
     };
     checkAccess();
+    return () => { isMounted = false; };
   }, []);
 
   const handleGameComplete = (score: number, duration: number) => {
@@ -95,6 +100,19 @@ export default function BrainTestPage() {
     );
   }
 
+  // 로딩 중
+  if (canProceed === null) {
+    return (
+      <div className="min-h-screen pt-20 px-4 flex items-center justify-center">
+        <div className="text-center">
+          <span className="text-5xl block mb-4 animate-pulse">🧠</span>
+          <p className="text-vb-muted">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 접근 불가 (무료 체험 끝)
   if (!canProceed) {
     return (
       <div className="min-h-screen pt-20 px-4 flex items-center justify-center">
@@ -150,7 +168,7 @@ export default function BrainTestPage() {
         {/* 게임 컴포넌트 */}
         <div className="bg-white rounded-3xl p-6 shadow-sm">
           {currentGame.type === "memory" && (
-            <MemoryGame onComplete={handleGameComplete} />
+            <MemoryGame onComplete={handleGameComplete} initialDifficulty="easy" />
           )}
           {currentGame.type === "calc" && (
             <CalcGame onComplete={handleGameComplete} />
