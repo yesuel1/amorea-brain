@@ -49,8 +49,10 @@ export function canUseFree(): boolean {
 export async function canUseGame(): Promise<boolean> {
   // 로그인한 사용자는 무제한
   const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) return true;
+
+  // getSession()으로 로컬 세션 먼저 확인 (더 빠름)
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.user) return true;
 
   // 비로그인 사용자는 무료 횟수 체크
   return getFreeUsesRemaining() > 0;
